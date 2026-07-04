@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.streamlit/
+models/*.joblib
+data/processed/*.csv
+reports/*.html
+reports/*.png
+.env
