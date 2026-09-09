@@ -1,0 +1,37 @@
+Age,Gender,Department,GPA,CGPA,Stress_Level,Anxiety_Score,Depression_Score,Sleep_Hours,Sleep_Duration,Study_Hours,Social_Media_Hours,Physical_Activity,Steps_Per_Day,Mood_Description,Sentiment_Score,Reason,Prevention_Method
+19,Female,Engineering,2.6,2.6,9,22,20,4.5,4.5,9,5.5,15,2500,Tired,-0.5,Academic pressure and poor sleep,Structured study plan and sleep routine
+20,Male,Science,2.8,2.8,8,18,16,5.0,5.0,8,4.5,20,3200,Anxious,-0.3,Academic pressure and high anxiety,Study planning and anxiety management
+21,Female,Medical,3.0,3.0,9,20,19,5.2,5.2,10,3.5,10,2800,Sad,-0.6,Heavy workload and emotional exhaustion,Workload reduction and counselor support
+22,Male,Arts,3.1,3.1,7,14,13,6.0,6.0,7,6.5,25,4000,Tired,-0.2,Excessive social media and reduced rest,Digital time control and sleep hygiene
+18,Female,Commerce,2.4,2.4,8,19,15,5.5,5.5,8,3.0,30,4200,Anxious,-0.1,Academic difficulty and exam worry,Academic mentoring and revision schedule
+23,Other,Engineering,2.7,2.7,9,21,22,4.8,4.8,9,6.0,10,2300,Sad,-0.7,Low mood with sleep disruption,Counselor referral and daily routine building
+20,Female,Science,3.4,3.4,6,10,8,7.0,7.0,5,2.5,60,7000,Neutral,0.1,Mild academic stress,Time management and regular breaks
+21,Male,Medical,3.2,3.2,7,15,12,6.2,6.2,7,4.0,40,5500,Tired,-0.1,Study overload and limited recovery,Balanced study blocks and recovery time
+19,Female,Arts,3.6,3.6,5,8,7,7.5,7.5,4,5.0,45,6500,Neutral,0.2,Social media distraction,App limit setting and focused study routine
+22,Male,Commerce,2.5,2.5,8,13,17,5.8,5.8,6,3.0,20,3500,Sad,-0.4,Academic underperformance and low confidence,Peer tutoring and achievable weekly goals
+24,Female,Engineering,3.0,3.0,9,24,18,5.0,5.0,8,4.5,15,3000,Anxious,-0.5,High anxiety and workload pressure,Anxiety coping plan and faculty support
+18,Male,Science,3.3,3.3,6,9,6,6.8,6.8,5,2.0,50,7600,Happy,0.3,Normal academic adjustment,Maintain balanced lifestyle
+21,Female,Medical,2.9,2.9,9,18,21,4.7,4.7,10,5.0,10,2200,Sad,-0.8,Depressive symptoms and exhaustion,Professional counseling and routine activation
+20,Male,Engineering,3.1,3.1,7,16,10,6.1,6.1,8,2.5,35,5200,Anxious,0.0,Exam anxiety,Exam preparation plan and relaxation practice
+22,Female,Arts,3.7,3.7,4,5,4,8.0,8.0,3,2.0,70,9000,Happy,0.6,Low current risk,Maintain sleep activity and social support
+19,Male,Commerce,2.3,2.3,8,12,14,5.6,5.6,7,6.0,20,3800,Tired,-0.3,Poor academic performance and distraction,Academic support and digital boundaries
+23,Female,Science,3.0,3.0,8,19,13,6.0,6.0,6,7.0,25,4100,Anxious,-0.2,High screen time and anxiety,Screen schedule and anxiety grounding practice
+21,Male,Engineering,3.5,3.5,5,7,5,7.2,7.2,5,2.5,80,8500,Happy,0.4,Low current risk,Maintain balanced lifestyle
+20,Female,Medical,2.8,2.8,9,23,20,4.9,4.9,11,3.0,15,2600,Sad,-0.6,Medical workload and sleep loss,Workload planning and sleep recovery
+22,Male,Arts,3.2,3.2,6,11,9,6.5,6.5,5,5.5,35,6000,Neutral,0.0,Social media distraction,App limit setting and focused study routine
+18,Female,Engineering,2.9,2.9,8,17,12,5.4,5.4,8,4.0,25,4300,Anxious,-0.2,Academic pressure and high anxiety,Study planning and anxiety management
+24,Male,Commerce,2.6,2.6,7,10,16,6.0,6.0,6,3.5,20,3900,Sad,-0.4,Financial or performance stress,Practical problem solving and mentoring support
+21,Female,Science,3.8,3.8,3,4,3,8.2,8.2,4,1.5,90,10000,Happy,0.7,Low current risk,Maintain balanced lifestyle
+20,Male,Medical,3.1,3.1,8,18,15,5.7,5.7,9,3.0,30,4700,Tired,-0.2,Heavy workload and emotional exhaustion,Workload reduction and counselor support
+19,Female,Arts,2.7,2.7,7,14,13,6.1,6.1,5,6.5,20,3300,Sad,-0.3,Low mood and social withdrawal,Social connection plan and counseling support
+22,Male,Engineering,3.4,3.4,6,9,7,7.0,7.0,6,2.0,65,8200,Neutral,0.2,Mild academic stress,Time management and regular breaks
+23,Female,Commerce,2.5,2.5,8,16,18,5.2,5.2,6,4.5,15,3100,Tired,-0.5,Financial or performance stress,Practical problem solving and mentoring support
+18,Male,Science,3.0,3.0,7,15,11,6.0,6.0,7,3.0,40,5600,Anxious,-0.1,Exam anxiety,Exam preparation plan and relaxation practice
+21,Female,Engineering,2.4,2.4,9,20,17,5.1,5.1,10,5.0,20,3400,Tired,-0.4,Academic difficulty and exam worry,Academic mentoring and revision schedule
+20,Male,Arts,3.6,3.6,4,6,5,7.8,7.8,4,2.0,75,8800,Happy,0.5,Low current risk,Maintain balanced lifestyle
+22,Female,Medical,3.0,3.0,9,22,19,4.6,4.6,11,4.0,10,2400,Sad,-0.7,Depressive symptoms and exhaustion,Professional counseling and routine activation
+19,Male,Commerce,3.2,3.2,6,9,8,6.8,6.8,5,5.0,45,6100,Neutral,0.1,Social media distraction,App limit setting and focused study routine
+23,Female,Science,2.9,2.9,8,17,14,5.5,5.5,8,3.0,25,4500,Anxious,-0.2,Academic pressure and poor sleep,Structured study plan and sleep routine
+21,Male,Engineering,2.8,2.8,9,18,18,5.0,5.0,9,6.0,15,2800,Sad,-0.5,Poor academic performance and distraction,Academic support and digital boundaries
+20,Female,Arts,3.5,3.5,5,7,6,7.4,7.4,4,2.5,70,7900,Happy,0.4,Low current risk,Maintain balanced lifestyle
+24,Male,Medical,3.1,3.1,8,19,16,5.8,5.8,10,3.5,30,5000,Tired,-0.3,Study overload and limited recovery,Balanced study blocks and recovery time

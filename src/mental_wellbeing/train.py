@@ -1,158 +1,54 @@
+"""Train the complete clustering, prediction, and explanation-ready system."""
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from datetime import datetime, timezone
 
 import joblib
 import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report, f1_score
+from sklearn.metrics import accuracy_score, classification_report, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 
-from .config import (
-    DEPRESSION_RISK_MODEL,
-    DEPRESSION_RISK_PROFILE,
-    MENTAL_STATUS_MODEL,
-    MENTAL_STATUS_PROFILE,
-    MODEL_DIR,
-    PROCESSED_DATA_DIR,
-    RANDOM_STATE,
-)
-from .data import clean_lifestyle, clean_mental_health, load_lifestyle, load_mental_health
-from .explain import build_profile
-from .features import (
-    DEPRESSION_TARGET,
-    LIFESTYLE_FEATURES,
-    MENTAL_STATUS_FEATURES,
-    MENTAL_STATUS_TARGET,
-    build_depression_risk_pipeline,
-    build_mental_status_pipeline,
-)
-
-
-def _train_and_save(
-    df: pd.DataFrame,
-    features: list[str],
-    target: str,
-    pipeline,
-    model_path: Path,
-) -> dict:
-    x_train, x_test, y_train, y_test = train_test_split(
-        df[features],
-        df[target],
-        test_size=0.2,
-        stratify=df[target],
-        random_state=RANDOM_STATE,
-    )
-    pipeline.fit(x_train, y_train)
-    predictions = pipeline.predict(x_test)
-
-    MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    joblib.dump(pipeline, model_path)
-
-    return {
-        "model_path": str(model_path),
-        "rows": int(len(df)),
-        "accuracy": round(float(accuracy_score(y_test, predictions)), 4),
-        "weighted_f1": round(float(f1_score(y_test, predictions, average="weighted")), 4),
-        "classification_report": classification_report(y_test, predictions, output_dict=True),
-    }
-
-
-def _save_profile(
-    df: pd.DataFrame,
-    target: str,
-    low_risk_value: int,
-    high_risk_values: set[int],
-    numeric_features: list[str],
-    categorical_features: list[str],
-    model_path: Path,
-    profile_path: Path,
-) -> None:
-    model = joblib.load(model_path)
-    profile = build_profile(
-        df=df,
-        target=target,
-        low_risk_value=low_risk_value,
-        high_risk_values=high_risk_values,
-        numeric_features=numeric_features,
-        categorical_features=categorical_features,
-        model=model,
-    )
-    joblib.dump(profile, profile_path)
+from .clustering import benchmark_clusters
+from .config import ARTIFACT_PATH, CLUSTERED_DATA_PATH, CLUSTER_FEATURES, FEATURES, METRICS_PATH, MODEL_DIR, PROCESSED_DATA_DIR, RANDOM_STATE, TARGET
+from .data import clean_lifestyle, load_lifestyle
+from .features import classifier_candidates
 
 
 def train_all() -> dict:
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    data = clean_lifestyle(load_lifestyle())
 
-    mental_df = clean_mental_health(load_mental_health())
-    lifestyle_df = clean_lifestyle(load_lifestyle())
+    cluster_metrics, clusterer, _ = benchmark_clusters(data, CLUSTER_FEATURES)
+    data = data.copy()
+    data["Cluster"] = clusterer.predict(data[CLUSTER_FEATURES])
+    data.to_csv(CLUSTERED_DATA_PATH, index=False)
 
-    mental_df.to_csv(PROCESSED_DATA_DIR / "mental_health_clean.csv", index=False)
-    lifestyle_df.to_csv(PROCESSED_DATA_DIR / "student_lifestyle_clean.csv", index=False)
+    x_train, x_test, y_train, y_test = train_test_split(data[FEATURES + ["Cluster"]], data[TARGET], test_size=0.2, stratify=data[TARGET], random_state=RANDOM_STATE)
+    model_results, fitted = [], {}
+    for name, model in classifier_candidates().items():
+        model.fit(x_train, y_train)
+        prediction = model.predict(x_test)
+        model_results.append({"model": name, "accuracy": round(float(accuracy_score(y_test, prediction)), 4), "precision": round(float(precision_score(y_test, prediction, zero_division=0)), 4), "recall": round(float(recall_score(y_test, prediction, zero_division=0)), 4), "f1": round(float(f1_score(y_test, prediction, zero_division=0)), 4)})
+        fitted[name] = model
+    results_df = pd.DataFrame(model_results).sort_values(["f1", "accuracy"], ascending=False).reset_index(drop=True)
+    best_name = str(results_df.iloc[0]["model"])
+    best_model = fitted[best_name]
+    transformed_train = best_model.named_steps["preprocessor"].transform(x_train.iloc[:1000])
+    transformed_train = transformed_train.toarray() if hasattr(transformed_train, "toarray") else transformed_train
+    feature_names = list(best_model.named_steps["preprocessor"].get_feature_names_out())
 
-    results = {
-        "mental_status": _train_and_save(
-            mental_df,
-            MENTAL_STATUS_FEATURES,
-            MENTAL_STATUS_TARGET,
-            build_mental_status_pipeline(),
-            MENTAL_STATUS_MODEL,
-        ),
-        "depression_risk": _train_and_save(
-            lifestyle_df,
-            LIFESTYLE_FEATURES,
-            DEPRESSION_TARGET,
-            build_depression_risk_pipeline(),
-            DEPRESSION_RISK_MODEL,
-        ),
-    }
-
-    _save_profile(
-        mental_df,
-        MENTAL_STATUS_TARGET,
-        low_risk_value=0,
-        high_risk_values={1, 2},
-        numeric_features=[
-            "Age",
-            "GPA",
-            "Stress_Level",
-            "Anxiety_Score",
-            "Depression_Score",
-            "Sleep_Hours",
-            "Steps_Per_Day",
-            "Sentiment_Score",
-        ],
-        categorical_features=["Gender", "Mood_Description"],
-        model_path=MENTAL_STATUS_MODEL,
-        profile_path=MENTAL_STATUS_PROFILE,
-    )
-    _save_profile(
-        lifestyle_df,
-        DEPRESSION_TARGET,
-        low_risk_value=0,
-        high_risk_values={1},
-        numeric_features=[
-            "Age",
-            "CGPA",
-            "Sleep_Duration",
-            "Study_Hours",
-            "Social_Media_Hours",
-            "Physical_Activity",
-            "Stress_Level",
-        ],
-        categorical_features=["Gender", "Department"],
-        model_path=DEPRESSION_RISK_MODEL,
-        profile_path=DEPRESSION_RISK_PROFILE,
-    )
-
-    report_path = PROCESSED_DATA_DIR / "training_metrics.json"
-    report_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
-    return results
+    artifact = {"model": best_model, "clusterer": clusterer, "features": FEATURES, "cluster_features": CLUSTER_FEATURES, "training_reference": transformed_train, "transformed_feature_names": feature_names, "best_model_name": best_name}
+    joblib.dump(artifact, ARTIFACT_PATH)
+    best_cluster = cluster_metrics.iloc[0]
+    metrics = {"generated_at": datetime.now(timezone.utc).isoformat(), "dataset_rows": int(len(data)), "target": TARGET, "cluster_selection": cluster_metrics.round(4).to_dict(orient="records"), "selected_clusterer": {"algorithm": str(best_cluster["algorithm"]), "n_clusters": int(best_cluster["n_clusters"]), "silhouette": round(float(best_cluster["silhouette"]), 4), "davies_bouldin": round(float(best_cluster["davies_bouldin"]), 4), "calinski_harabasz": round(float(best_cluster["calinski_harabasz"]), 4)}, "prediction_models": results_df.to_dict(orient="records"), "selected_prediction_model": best_name, "classification_report": classification_report(y_test, best_model.predict(x_test), output_dict=True)}
+    METRICS_PATH.write_text(json.dumps(metrics, indent=2, default=float), encoding="utf-8")
+    return metrics
 
 
 def main() -> None:
-    results = train_all()
-    print(json.dumps(results, indent=2))
+    print(json.dumps(train_all(), indent=2, default=float))
 
 
 if __name__ == "__main__":

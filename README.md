@@ -1,72 +1,33 @@
-# Student Mental Wellbeing Prediction
+# Student Wellbeing Intelligence System
 
-Semester project for analyzing student lifestyle patterns and predicting mental wellbeing risk using machine learning.
+Python-only student wellbeing analytics system built with Streamlit, Flask, scikit-learn, SHAP, LIME, Plotly, Matplotlib, and Seaborn. It is an educational screening tool, not a clinical diagnostic system.
 
-## Project Features
+## What it does
 
-- Cleans and validates two student wellbeing datasets.
-- Trains two models:
-  - `mental_status`: predicts mental health status from scores, sleep, GPA, activity, mood, and reflection sentiment.
-  - `depression_risk`: predicts depression risk from student lifestyle factors.
-- Provides a Streamlit dashboard for dataset exploration and predictions.
-- Explains predictions using model feature importance and low-risk patterns learned from the dataset.
-- Generates recommendations by comparing student input with the dataset's low-risk profile.
-- Provides a small Flask API for programmatic predictions.
-- Includes tests and a simple project report outline.
+1. Cleans and validates the student lifestyle dataset.
+2. Clusters students with K-Means, Agglomerative Clustering, and Gaussian Mixture Models over 2–6 segments.
+3. Selects the strongest clustering candidate using silhouette score, Davies–Bouldin index, and Calinski–Harabasz score.
+4. Adds the selected student segment to the prediction features.
+5. Benchmarks Random Forest and Extra Trees classifiers, selecting the best with F1 score then accuracy.
+6. Predicts an individual student's depression-risk outcome, cluster, class probabilities, SHAP contributions, and LIME explanation.
 
-## Directory Structure
-
-```text
-Mental-Wellbeing/
-  data/
-    raw/                 Original CSV files
-    processed/           Cleaned/generated datasets
-  docs/                  Proposal and synopsis PDFs
-  models/                Trained model files
-  notebooks/             Notebook workspace
-  reports/               Project report material
-  src/mental_wellbeing/  Application source code
-  tests/                 Automated tests
-```
-
-## Quick Start
+## Setup and use
 
 ```powershell
-python -m venv .venv
+py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m mental_wellbeing.train
-streamlit run src\mental_wellbeing\web\dashboard.py
-```
-
-If Python cannot find the package, install it in editable mode:
-
-```powershell
 pip install -e .
+py run_train.py
+py run_dashboard.py
 ```
 
-## Run The API
+Run the Flask API with `py run_api.py`. Send an `application/json` POST to `/predict` using the fields shown in the dashboard. Training creates `models/wellbeing_system.joblib`, `data/processed/student_lifestyle_clustered.csv`, and `data/processed/training_metrics.json`.
 
-```powershell
-python -m mental_wellbeing.web.api
-```
+The required raw dataset is `data/raw/student_lifestyle_100k.csv`, with `Age`, `Gender`, `Department`, `CGPA`, `Sleep_Duration`, `Study_Hours`, `Social_Media_Hours`, `Physical_Activity`, `Stress_Level`, and `Depression` columns.
 
-Example request:
+## Counsellor portal
 
-```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:5000/predict/depression-risk -ContentType "application/json" -Body '{
-  "Age": 21,
-  "Gender": "Female",
-  "Department": "Engineering",
-  "CGPA": 3.2,
-  "Sleep_Duration": 6.5,
-  "Study_Hours": 5.0,
-  "Social_Media_Hours": 3.0,
-  "Physical_Activity": 60,
-  "Stress_Level": 6
-}'
-```
+The Streamlit dashboard includes a login-protected counsellor portal. On its first start, it creates a local SQLite database at `data/wellbeing_portal.db` and displays a **Create administrator account** screen. Choose the admin username and password there; no preset password is used.
 
-## Academic Note
-
-This system is for educational screening and analysis only. It must not be used as a clinical diagnosis tool.
+After setup, choose **Admin** or **Counsellor** on the login screen. Admins can only create counsellor accounts using the counsellor's email address and temporary password; they cannot see student information. Counsellors sign in with their email address, can save student assessments, view student history, and change their own password.

@@ -1,17 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import pandas as pd
-
-
-@dataclass(frozen=True)
-class FeatureProfile:
-    mean: float
-    low_risk_mean: float
-    high_risk_mean: float
-    std: float
-    importance: float
 
 
 HIGHER_IS_BETTER = {
@@ -46,6 +35,8 @@ FRIENDLY_NAMES = {
     "Study_Hours": "study hours",
     "Age": "age",
 }
+
+NON_ACTIONABLE_FEATURES = {"Age"}
 
 
 def _feature_importance_by_original_column(model, numeric_features: list[str], categorical_features: list[str]) -> dict[str, float]:
@@ -103,51 +94,110 @@ def build_profile(
     }
 
 
-def explain_prediction(payload: dict, profile: dict, predicted_risk: int) -> dict:
-    reason_rows = []
+def _class_probability(model, row: pd.DataFrame, class_value: int) -> float:
+    if not hasattr(model, "predict_proba"):
+        return 0.0
+    classes = list(model.classes_)
+    if class_value not in classes:
+        return 0.0
+    class_index = classes.index(class_value)
+    return float(model.predict_proba(row)[0][class_index])
+
+
+def _toward_low_risk_value(feature: str, current_value: float, low_risk_value: float) -> float:
+    if feature in HIGHER_IS_BETTER:
+        return max(current_value, low_risk_value)
+    if feature in LOWER_IS_BETTER:
+        return min(current_value, low_risk_value)
+    return low_risk_value
+
+
+def _driver_reason(feature: str, risk_probability: float, improved_probability: float) -> str:
+    name = FRIENDLY_NAMES.get(feature, feature.replace("_", " ").lower())
+    change = max(0.0, risk_probability - improved_probability)
+    return (
+        f"The trained model found {name} to be an important risk driver for this input. "
+        f"When only this factor is shifted toward patterns learned from low-risk students, "
+        f"the model-estimated risk drops by {change:.1%}."
+    )
+
+
+def _model_action(feature: str, current_value: float, tested_value: float) -> str:
+    name = FRIENDLY_NAMES.get(feature, feature.replace("_", " ").lower())
+    if tested_value > current_value:
+        direction = "increase"
+    elif tested_value < current_value:
+        direction = "reduce"
+    else:
+        direction = "stabilize"
+    return (
+        f"Model-derived prevention focus: {direction} {name}. "
+        "This is selected because the trained model predicts lower risk under that changed input pattern."
+    )
+
+
+def explain_prediction(model, payload: dict, profile: dict, predicted_risk: int, features: list[str]) -> dict:
+    row = pd.DataFrame([{feature: payload.get(feature) for feature in features}])
+    low_risk_value = int(profile["low_risk_value"])
+    risk_class = predicted_risk
+    if predicted_risk == low_risk_value:
+        risk_class = max((int(cls) for cls in model.classes_), default=predicted_risk)
+
+    base_risk_probability = _class_probability(model, row, risk_class)
+    counterfactuals = []
+
     for feature, stats in profile["feature_profiles"].items():
-        value = payload.get(feature)
-        if value is None:
-            continue
-        value = float(value)
-        low_risk_mean = float(stats["low_risk_mean"])
-        std = max(float(stats["std"]), 0.01)
-        importance = float(stats["importance"])
-
-        if feature in HIGHER_IS_BETTER:
-            risk_gap = max(0.0, low_risk_mean - value)
-            direction = "below"
-        elif feature in LOWER_IS_BETTER:
-            risk_gap = max(0.0, value - low_risk_mean)
-            direction = "above"
-        else:
-            risk_gap = abs(value - low_risk_mean)
-            direction = "different from"
-
-        impact = (risk_gap / std) * (importance + 0.01)
-        if impact <= 0:
+        if feature in NON_ACTIONABLE_FEATURES or feature not in payload:
             continue
 
-        name = FRIENDLY_NAMES.get(feature, feature.replace("_", " ").lower())
-        reason_rows.append(
+        current_value = payload.get(feature)
+        if current_value is None:
+            continue
+
+        current_value = float(current_value)
+        tested_value = _toward_low_risk_value(feature, current_value, float(stats["low_risk_mean"]))
+        if tested_value == current_value:
+            continue
+
+        changed_payload = dict(payload)
+        changed_payload[feature] = tested_value
+        changed_row = pd.DataFrame([{column: changed_payload.get(column) for column in features}])
+        changed_risk_probability = _class_probability(model, changed_row, risk_class)
+        improvement = base_risk_probability - changed_risk_probability
+        if improvement <= 0:
+            continue
+
+        counterfactuals.append(
             {
                 "feature": feature,
-                "reason": f"{name} is {direction} the low-risk dataset pattern ({value:.2f} vs {low_risk_mean:.2f}).",
-                "recommendation": f"Move {name} closer to the low-risk dataset average of {low_risk_mean:.2f}.",
-                "impact": impact,
+                "current_value": current_value,
+                "tested_value": tested_value,
+                "importance": float(stats["importance"]),
+                "improvement": improvement,
+                "changed_risk_probability": changed_risk_probability,
             }
         )
 
-    reason_rows.sort(key=lambda row: row["impact"], reverse=True)
-    selected = reason_rows[:4]
+    counterfactuals.sort(key=lambda item: (item["improvement"], item["importance"]), reverse=True)
+    selected = counterfactuals[:4]
 
-    if not selected and predicted_risk == profile["low_risk_value"]:
+    if not selected:
         return {
-            "reasons": ["The input pattern is close to the low-risk group in the training data."],
-            "recommendations": ["Maintain the current low-risk pattern and keep monitoring changes."],
+            "reasons": [
+                "The model did not find a single modifiable factor that clearly reduced the predicted risk when tested alone."
+            ],
+            "recommendations": [
+                "No model-derived prevention focus was found from single-factor counterfactual testing."
+            ],
         }
 
     return {
-        "reasons": [row["reason"] for row in selected],
-        "recommendations": [row["recommendation"] for row in selected],
+        "reasons": [
+            _driver_reason(item["feature"], base_risk_probability, item["changed_risk_probability"])
+            for item in selected
+        ],
+        "recommendations": [
+            _model_action(item["feature"], item["current_value"], item["tested_value"])
+            for item in selected
+        ],
     }

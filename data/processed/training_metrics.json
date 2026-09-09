@@ -1,74 +1,178 @@
 {
-  "mental_status": {
-    "model_path": "C:\\Users\\navan\\Mental-Wellbeing\\models\\mental_status_model.joblib",
-    "rows": 500,
-    "accuracy": 0.97,
-    "weighted_f1": 0.9701,
-    "classification_report": {
-      "0": {
-        "precision": 1.0,
-        "recall": 0.8,
-        "f1-score": 0.8888888888888888,
-        "support": 5.0
-      },
-      "1": {
-        "precision": 0.9,
-        "recall": 1.0,
-        "f1-score": 0.9473684210526315,
-        "support": 27.0
-      },
-      "2": {
-        "precision": 1.0,
-        "recall": 0.9705882352941176,
-        "f1-score": 0.9850746268656716,
-        "support": 68.0
-      },
-      "accuracy": 0.97,
-      "macro avg": {
-        "precision": 0.9666666666666667,
-        "recall": 0.9235294117647058,
-        "f1-score": 0.9404439789357305,
-        "support": 100.0
-      },
-      "weighted avg": {
-        "precision": 0.973,
-        "recall": 0.97,
-        "f1-score": 0.9700846643973117,
-        "support": 100.0
-      }
+  "generated_at": "2026-08-08T06:42:37.451162+00:00",
+  "dataset_rows": 100000,
+  "target": "Depression",
+  "cluster_selection": [
+    {
+      "algorithm": "K-Means",
+      "n_clusters": 2,
+      "silhouette": 0.1337,
+      "davies_bouldin": 2.4372,
+      "calinski_harabasz": 791.4615,
+      "selection_score": 4.0
+    },
+    {
+      "algorithm": "Gaussian Mixture",
+      "n_clusters": 3,
+      "silhouette": 0.126,
+      "davies_bouldin": 2.2441,
+      "calinski_harabasz": 629.0637,
+      "selection_score": 4.6667
+    },
+    {
+      "algorithm": "K-Means",
+      "n_clusters": 5,
+      "silhouette": 0.1172,
+      "davies_bouldin": 2.0492,
+      "calinski_harabasz": 563.7903,
+      "selection_score": 4.6667
+    },
+    {
+      "algorithm": "K-Means",
+      "n_clusters": 3,
+      "silhouette": 0.1214,
+      "davies_bouldin": 2.2943,
+      "calinski_harabasz": 655.689,
+      "selection_score": 5.0
+    },
+    {
+      "algorithm": "K-Means",
+      "n_clusters": 6,
+      "silhouette": 0.1157,
+      "davies_bouldin": 1.9387,
+      "calinski_harabasz": 531.2719,
+      "selection_score": 5.0
+    },
+    {
+      "algorithm": "Gaussian Mixture",
+      "n_clusters": 2,
+      "silhouette": 0.1285,
+      "davies_bouldin": 2.5107,
+      "calinski_harabasz": 743.3344,
+      "selection_score": 5.3333
+    },
+    {
+      "algorithm": "K-Means",
+      "n_clusters": 4,
+      "silhouette": 0.1132,
+      "davies_bouldin": 2.1611,
+      "calinski_harabasz": 603.6461,
+      "selection_score": 5.3333
+    },
+    {
+      "algorithm": "Gaussian Mixture",
+      "n_clusters": 4,
+      "silhouette": 0.1083,
+      "davies_bouldin": 2.2208,
+      "calinski_harabasz": 571.2682,
+      "selection_score": 6.6667
+    },
+    {
+      "algorithm": "Gaussian Mixture",
+      "n_clusters": 5,
+      "silhouette": 0.0947,
+      "davies_bouldin": 2.1189,
+      "calinski_harabasz": 493.703,
+      "selection_score": 7.6667
+    },
+    {
+      "algorithm": "Gaussian Mixture",
+      "n_clusters": 6,
+      "silhouette": 0.099,
+      "davies_bouldin": 2.2038,
+      "calinski_harabasz": 477.9978,
+      "selection_score": 8.3333
+    },
+    {
+      "algorithm": "Agglomerative",
+      "n_clusters": 2,
+      "silhouette": 0.0962,
+      "davies_bouldin": 2.9494,
+      "calinski_harabasz": 480.0565,
+      "selection_score": 11.6667
+    },
+    {
+      "algorithm": "Agglomerative",
+      "n_clusters": 4,
+      "silhouette": 0.0702,
+      "davies_bouldin": 2.6409,
+      "calinski_harabasz": 398.0042,
+      "selection_score": 12.6667
+    },
+    {
+      "algorithm": "Agglomerative",
+      "n_clusters": 3,
+      "silhouette": 0.0683,
+      "davies_bouldin": 2.9282,
+      "calinski_harabasz": 421.3557,
+      "selection_score": 13.0
+    },
+    {
+      "algorithm": "Agglomerative",
+      "n_clusters": 5,
+      "silhouette": 0.0599,
+      "davies_bouldin": 2.5021,
+      "calinski_harabasz": 383.0306,
+      "selection_score": 13.0
+    },
+    {
+      "algorithm": "Agglomerative",
+      "n_clusters": 6,
+      "silhouette": 0.0595,
+      "davies_bouldin": 2.3754,
+      "calinski_harabasz": 356.5825,
+      "selection_score": 13.0
     }
+  ],
+  "selected_clusterer": {
+    "algorithm": "K-Means",
+    "n_clusters": 2,
+    "silhouette": 0.1337,
+    "davies_bouldin": 2.4372,
+    "calinski_harabasz": 791.4615
   },
-  "depression_risk": {
-    "model_path": "C:\\Users\\navan\\Mental-Wellbeing\\models\\depression_risk_model.joblib",
-    "rows": 100000,
-    "accuracy": 0.7368,
-    "weighted_f1": 0.7849,
-    "classification_report": {
-      "0": {
-        "precision": 0.9465150558012213,
-        "recall": 0.7496664442961974,
-        "f1-score": 0.8366682177757097,
-        "support": 17988.0
-      },
-      "1": {
-        "precision": 0.2172779419433339,
-        "recall": 0.621272365805169,
-        "f1-score": 0.32195750160978753,
-        "support": 2012.0
-      },
-      "accuracy": 0.73675,
-      "macro avg": {
-        "precision": 0.5818964988722776,
-        "recall": 0.6854694050506832,
-        "f1-score": 0.5793128596927486,
-        "support": 20000.0
-      },
-      "weighted avg": {
-        "precision": 0.8731538021471179,
-        "recall": 0.73675,
-        "f1-score": 0.7848883197294179,
-        "support": 20000.0
-      }
+  "prediction_models": [
+    {
+      "model": "Random Forest",
+      "accuracy": 0.8557,
+      "precision": 0.2553,
+      "recall": 0.2266,
+      "f1": 0.2401
+    },
+    {
+      "model": "Extra Trees",
+      "accuracy": 0.8713,
+      "precision": 0.2745,
+      "recall": 0.17,
+      "f1": 0.2099
+    }
+  ],
+  "selected_prediction_model": "Random Forest",
+  "classification_report": {
+    "0": {
+      "precision": 0.9145712089601405,
+      "recall": 0.926061818990438,
+      "f1-score": 0.9202806474780398,
+      "support": 17988.0
+    },
+    "1": {
+      "precision": 0.2553191489361702,
+      "recall": 0.22664015904572565,
+      "f1-score": 0.2401263823064771,
+      "support": 2012.0
+    },
+    "accuracy": 0.8557,
+    "macro avg": {
+      "precision": 0.5849451789481553,
+      "recall": 0.5763509890180818,
+      "f1-score": 0.5802035148922584,
+      "support": 20000.0
+    },
+    "weighted avg": {
+      "precision": 0.8482504517217291,
+      "recall": 0.8557,
+      "f1-score": 0.8518571284017807,
+      "support": 20000.0
     }
   }
 }
