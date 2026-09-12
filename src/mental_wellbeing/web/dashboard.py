@@ -9,7 +9,7 @@ from mental_wellbeing.config import CLUSTERED_DATA_PATH, MENTAL_HEALTH_METRICS_P
 from mental_wellbeing.data import clean_lifestyle, load_lifestyle
 from mental_wellbeing.mental_health import predict_mental_health
 from mental_wellbeing.predict import predict_student
-from mental_wellbeing.storage import admin_exists, authenticate, change_password, create_admin, create_counsellor, initialise_database, recent_students, save_assessment, student_history
+from mental_wellbeing.storage import admin_exists, authenticate, change_password, create_admin, create_campus, create_counsellor, find_directory_student, initialise_database, list_campuses, recent_students, save_assessment, student_history
 
 st.set_page_config(page_title="Student Wellbeing Intelligence", page_icon="🧠", layout="wide")
 initialise_database()
@@ -46,62 +46,103 @@ def login() -> None:
         st.caption("Counsellor login: use the email address and temporary password provided by your administrator.")
     else:
         st.caption("Admin login: sign in to create counsellor accounts. Administrators cannot access student records.")
+    campuses = list_campuses()
     with st.form("login"):
         if account_type == "Counsellor":
             username = st.text_input("Counsellor email address")
+            selected_campus = st.selectbox("Select your campus", campuses)
         else:
             username = st.text_input("Admin username")
+            selected_campus = None
         password = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Sign in")
     if submitted:
         expected_role = "counsellor" if account_type == "Counsellor" else "admin"
-        user = authenticate(username, password, expected_role)
+        user = authenticate(username, password, expected_role, selected_campus)
         if user:
             st.session_state.user = user
             st.rerun()
-        st.error("Incorrect username or password.")
+        if account_type == "Counsellor":
+            st.error("Incorrect email, password, or campus. Select the campus assigned to your account.")
+        else:
+            st.error("Incorrect username or password.")
+
+def _next_steps(payload: dict, result: dict) -> list[str]:
+    """Suggest practical conversation topics for the factors highlighted by the model."""
+    details = " ".join(result.get("shap_details", [])).lower()
+    steps = []
+    if "sleep" in details:
+        steps.append("Sleep: discuss a consistent sleep and wake schedule, and agree on one small change to protect rest this week.")
+    if "stress" in details:
+        steps.append("Stress: identify the main pressure, break it into manageable tasks, and practise a short breathing or grounding exercise.")
+    if "anxiety" in details:
+        steps.append("Anxiety: offer a private check-in, explore what support feels comfortable, and refer to professional help when appropriate.")
+    if "depression" in details:
+        steps.append("Mood: listen without judgement, check immediate wellbeing, and follow the institution's referral or safeguarding process if needed.")
+    if "social-media" in details or "social media" in details:
+        steps.append("Social media: explore whether late or extended use affects sleep or study, then try a realistic screen-free period.")
+    if "physical activity" in details or "daily steps" in details:
+        steps.append("Activity: agree on gentle, achievable movement such as a short walk, while respecting the student's health and circumstances.")
+    if "study hours" in details:
+        steps.append("Study routine: review workload and breaks, then create a manageable weekly plan with time for rest.")
+    return steps or ["Arrange a supportive follow-up conversation and ask the student which area they would like help with first."]
 
 def render_result(result: dict) -> None:
     st.metric("Prediction", result["label"])
+    probability_values = result.get("probabilities", {})
+    predicted_probability = probability_values.get(str(result.get("prediction")))
+    if predicted_probability is not None:
+        st.caption(f"The screening model estimates this result with {float(predicted_probability):.1%} confidence.")
     if result.get("system") == "mental_health":
-        st.caption(f"Supplementary mental-health dataset · {result['model']}")
         labels = result.get("class_labels", {})
         probabilities = pd.DataFrame({"Outcome": [labels.get(label, f"Status class {label}") for label in result["probabilities"]], "Probability": list(result["probabilities"].values())})
     else:
-        st.caption(f"Student segment {result['cluster']} · {result['cluster_algorithm']} · {result['model']}")
         probabilities = pd.DataFrame({"Outcome": ["Lower risk", "At-risk"], "Probability": [result["probabilities"].get("0", 0), result["probabilities"].get("1", 0)]})
     st.plotly_chart(px.bar(probabilities, x="Outcome", y="Probability", range_y=[0, 1]), use_container_width=True)
-    st.subheader("Model explanation")
+    st.subheader("What this result may mean")
     st.info(result["reason"])
     if result.get("shap_details"):
-        st.markdown("**Main SHAP factors**")
+        st.markdown("**Main factors to discuss with the student**")
         for detail in result["shap_details"]:
             st.write(f"- {detail}")
-    one, two = st.columns(2)
-    one.plotly_chart(px.bar(pd.DataFrame(result["shap"]), x="shap_value", y="feature", orientation="h", color="shap_value", title="SHAP contributions"), use_container_width=True)
-    two.dataframe(pd.DataFrame(result["lime"]), use_container_width=True, hide_index=True)
+    st.subheader("Possible next steps")
+    for step in _next_steps({}, result):
+        st.write(f"- {step}")
+    st.caption("Use this result as a conversation guide, not as a clinical diagnosis. Consider the student's own experience and follow your institution's support process.")
 
 def assessment() -> None:
     st.title("Student Assessment")
     selected_system = st.radio("Choose prediction dataset", ["Student lifestyle depression model", "Supplementary mental-health status model"], horizontal=True)
     if selected_system.startswith("Supplementary"):
         st.caption("This is a separate three-class model trained only on the supplementary mental-health dataset. Its status classes are dataset labels, not clinical diagnoses.")
+    st.subheader("Student record")
+    a, b, c = st.columns(3)
+    student_code = a.text_input("Roll number / Student ID *", key="assessment_student_id", placeholder="Enter the student's roll number")
+    directory_student = find_directory_student(student_code) if student_code.strip() else None
+    name = b.text_input("Student name *", value=directory_student["full_name"] if directory_student else "", disabled=True)
+    programme = c.text_input("Programme / course", value=directory_student["programme"] if directory_student else "", disabled=True)
+    if student_code.strip() and directory_student is None:
+        st.warning("No student was found for that roll number in the student directory.")
+    elif directory_student:
+        st.success(f"Student record found: {directory_student['full_name']}")
+
     with st.form("assessment"):
-        st.subheader("Student record")
-        a, b, c = st.columns(3)
-        student_code = a.text_input("Student ID *")
-        name = b.text_input("Student name *")
-        programme = c.text_input("Programme / course")
         st.subheader("Wellbeing inputs")
         if selected_system.startswith("Student lifestyle"):
-            payload = {"Age": a.number_input("Age", 15, 50, 21), "Gender": b.selectbox("Gender", ["Female", "Male", "Other"]), "Department": c.selectbox("Department", ["Engineering", "Science", "Medical", "Arts", "Commerce"]), "CGPA": a.number_input("CGPA", 0.0, 4.0, 3.0, 0.1), "Sleep_Duration": b.number_input("Sleep duration", 0.0, 16.0, 7.0, 0.5), "Study_Hours": c.number_input("Study hours", 0.0, 18.0, 5.0, 0.5), "Social_Media_Hours": a.number_input("Social media hours", 0.0, 18.0, 3.0, 0.5), "Physical_Activity": b.number_input("Physical activity (minutes)", 0, 300, 60, 5), "Stress_Level": c.slider("Stress level", 1, 10, 5)}
+            age = a.number_input("Age", 15, 50, int(directory_student["age"]) if directory_student else 21)
+            gender = b.selectbox("Gender", ["Female", "Male", "Other"], index=["Female", "Male", "Other"].index(directory_student["gender"]) if directory_student and directory_student["gender"] in ["Female", "Male", "Other"] else 0)
+            department_options = ["Engineering", "Science", "Medical", "Arts", "Commerce"]
+            department = c.selectbox("Department", department_options, index=department_options.index(directory_student["department"]) if directory_student and directory_student["department"] in department_options else 0)
+            payload = {"Age": age, "Gender": gender, "Department": department, "CGPA": a.number_input("CGPA", 0.0, 4.0, float(directory_student["cgpa"]) if directory_student else 3.0, 0.1), "Sleep_Duration": b.number_input("Sleep duration", 0.0, 16.0, float(directory_student["sleep_duration"]) if directory_student else 7.0, 0.5), "Study_Hours": c.number_input("Study hours", 0.0, 18.0, float(directory_student["study_hours"]) if directory_student else 5.0, 0.5), "Social_Media_Hours": a.number_input("Social media hours", 0.0, 18.0, float(directory_student["social_media_hours"]) if directory_student else 3.0, 0.5), "Physical_Activity": b.number_input("Physical activity (minutes)", 0, 300, int(directory_student["physical_activity"]) if directory_student else 60, 5), "Stress_Level": c.slider("Stress level", 1, 10, int(directory_student["stress_level"]) if directory_student else 5)}
         else:
-            payload = {"Age": a.number_input("Age", 15, 80, 21), "Gender": b.selectbox("Gender", ["Female", "Male", "Other"]), "GPA": c.number_input("GPA", 0.0, 4.0, 3.0, 0.1), "Stress_Level": a.slider("Stress level", 1, 5, 3), "Anxiety_Score": b.number_input("Anxiety score", 0, 30, 10), "Depression_Score": c.number_input("Depression score", 0, 30, 10), "Sleep_Hours": a.number_input("Sleep hours", 0.0, 16.0, 7.0, 0.1), "Steps_Per_Day": b.number_input("Steps per day", 0, 30000, 5000, 100), "Mood_Description": c.text_input("Mood description", "Neutral"), "Sentiment_Score": a.number_input("Sentiment score", -1.0, 1.0, 0.0, 0.01), "Daily_Reflections": st.text_area("Daily reflections", "")}
+            payload = {"Age": a.number_input("Age", 15, 80, int(directory_student["age"]) if directory_student else 21), "Gender": b.selectbox("Gender", ["Female", "Male", "Other"], index=["Female", "Male", "Other"].index(directory_student["gender"]) if directory_student and directory_student["gender"] in ["Female", "Male", "Other"] else 0), "GPA": c.number_input("GPA", 0.0, 4.0, 3.0, 0.1), "Stress_Level": a.slider("Stress level", 1, 5, 3), "Anxiety_Score": b.number_input("Anxiety score", 0, 30, 10), "Depression_Score": c.number_input("Depression score", 0, 30, 10), "Sleep_Hours": a.number_input("Sleep hours", 0.0, 16.0, 7.0, 0.1), "Steps_Per_Day": b.number_input("Steps per day", 0, 30000, 5000, 100), "Mood_Description": c.text_input("Mood description", "Neutral"), "Sentiment_Score": a.number_input("Sentiment score", -1.0, 1.0, 0.0, 0.01), "Daily_Reflections": st.text_area("Daily reflections", "")}
         submitted = st.form_submit_button("Predict and save assessment")
     if submitted:
         try:
+            if not directory_student:
+                raise ValueError("Enter a valid roll number from the student directory before saving.")
             result = predict_student(payload) if selected_system.startswith("Student lifestyle") else predict_mental_health(payload)
-            save_assessment(student_code, name, programme, payload, result, st.session_state.user["id"])
+            save_assessment(student_code, name, programme, payload, result, st.session_state.user["id"], st.session_state.user["campus"])
             st.success("Assessment saved to the student history.")
             render_result(result)
         except (ValueError, FileNotFoundError, ImportError) as error:
@@ -109,21 +150,53 @@ def assessment() -> None:
 
 def history() -> None:
     st.title("Student History")
-    students = recent_students()
+    students = recent_students(st.session_state.user["campus"])
     if not students:
         st.info("No student assessments have been saved yet.")
         return
     labels = {f"{item['student_id']} — {item['full_name']}": item['student_id'] for item in students}
     selected = st.selectbox("Find a saved student", list(labels))
-    records = student_history(labels[selected])
+    records = student_history(labels[selected], st.session_state.user["campus"])
     st.caption(f"{records[0]['full_name']} · {records[0]['programme'] or 'Programme not recorded'}")
     for index, record in enumerate(records, start=1):
         result = record["result"]
         with st.expander(f"Assessment {index}: {record['created_at'][:19].replace('T', ' ')} · {result['label']}", expanded=index == 1):
             st.write(f"Saved by: {record['counsellor']}")
-            st.json({"input": record["input"], "prediction": {key: value for key, value in result.items() if key not in {"shap", "lime"}}})
-            if "shap" in result:
-                st.dataframe(pd.DataFrame(result["shap"]), hide_index=True, use_container_width=True)
+            prediction_columns = st.columns(3)
+            prediction_columns[0].metric("Result", result["label"])
+            probability_values = result.get("probabilities", {})
+            predicted_probability = probability_values.get(str(result.get("prediction")))
+            if predicted_probability is not None:
+                prediction_columns[1].metric("Confidence", f"{float(predicted_probability):.1%}")
+            assessment_type = "Mental-health check" if result.get("system") == "mental_health" else "Wellbeing check"
+            prediction_columns[2].metric("Assessment type", assessment_type)
+
+            input_labels = {
+                "Age": "Age", "Gender": "Gender", "Department": "Department", "CGPA": "CGPA",
+                "GPA": "GPA", "Sleep_Duration": "Sleep duration (hours)", "Sleep_Hours": "Sleep (hours)",
+                "Study_Hours": "Study hours", "Social_Media_Hours": "Social media (hours)",
+                "Physical_Activity": "Physical activity (minutes)", "Stress_Level": "Stress level",
+                "Anxiety_Score": "Anxiety score", "Depression_Score": "Depression score",
+                "Steps_Per_Day": "Steps per day", "Mood_Description": "Mood", "Sentiment_Score": "Sentiment score",
+                "Daily_Reflections": "Daily reflections",
+            }
+            assessment_data = pd.DataFrame([
+                {"Field": input_labels.get(key, key.replace("_", " ")), "Value": value}
+                for key, value in record["input"].items()
+            ])
+            st.subheader("Assessment details")
+            st.dataframe(assessment_data, hide_index=True, use_container_width=True)
+            if result.get("reason"):
+                st.subheader("What this result may mean")
+                st.info(result["reason"])
+            if result.get("shap_details"):
+                st.markdown("**Main factors to discuss with the student**")
+                for detail in result["shap_details"]:
+                    st.write(f"- {detail}")
+            st.subheader("Possible next steps")
+            for step in _next_steps(record["input"], result):
+                st.write(f"- {step}")
+            st.caption("This screening result supports a conversation and does not replace professional assessment or the student's own experience.")
 
 def overview() -> None:
     data = dataset()
@@ -132,7 +205,7 @@ def overview() -> None:
     cols[0].metric("Students in dataset", f"{len(data):,}")
     cols[1].metric("Depression rate", f"{data.Depression.mean():.1%}")
     cols[2].metric("Average sleep", f"{data.Sleep_Duration.mean():.1f} h")
-    cols[3].metric("Saved student records", len(recent_students()))
+    cols[3].metric("Saved student records", len(recent_students(st.session_state.user["campus"])))
     st.plotly_chart(px.histogram(data, x="Sleep_Duration", color="Depression", barmode="overlay", title="Sleep duration by outcome"), use_container_width=True)
 
 def clustering() -> None:
@@ -189,13 +262,29 @@ def evaluation() -> None:
 
 def admin() -> None:
     st.title("Admin: Counsellor Accounts")
+    st.caption("Create campuses first, then assign each counsellor to exactly one campus. Counsellors cannot switch to another campus at login.")
+    st.subheader("Approved campuses")
+    st.dataframe(pd.DataFrame({"Campus": list_campuses()}), hide_index=True, use_container_width=True)
+    with st.form("new_campus"):
+        campus_name = st.text_input("Add campus")
+        add_campus = st.form_submit_button("Add campus")
+    if add_campus:
+        try:
+            create_campus(campus_name)
+            st.success("Campus added. It is now available for counsellor assignment.")
+            st.rerun()
+        except ValueError as error:
+            st.error(str(error))
+
+    st.subheader("Create counsellor account")
     with st.form("new_counsellor"):
         username = st.text_input("Counsellor email address")
+        campus = st.selectbox("Assign campus", list_campuses())
         password = st.text_input("Temporary password", type="password")
         submit = st.form_submit_button("Create counsellor account")
     if submit:
         try:
-            create_counsellor(username, password)
+            create_counsellor(username, password, campus)
             st.success("Counsellor account created. Give these credentials to the counsellor securely.")
         except ValueError as error:
             st.error(str(error))
@@ -219,7 +308,10 @@ def main() -> None:
     if "user" not in st.session_state:
         login(); return
     user = st.session_state.user
+    user.setdefault("campus", "Main Campus")
     st.sidebar.title(f"Signed in: {user['username']}")
+    if user["role"] == "counsellor":
+        st.sidebar.caption(f"Campus: {user['campus']}")
     # Administrators manage access only. Student information is available solely
     # to counsellor accounts.
     if user["role"] == "admin":

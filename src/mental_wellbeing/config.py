@@ -8,6 +8,7 @@ MODEL_DIR = PROJECT_ROOT / "models"
 DATABASE_PATH = PROJECT_ROOT / "data" / "wellbeing_portal.db"
 
 LIFESTYLE_CSV = RAW_DATA_DIR / "student_lifestyle_100k.csv"
+STUDENT_DIRECTORY_CSV = RAW_DATA_DIR / "student_details_dummy_100k.csv"
 MENTAL_HEALTH_CSV = RAW_DATA_DIR / "mental_health_dataset.csv"
 ARTIFACT_PATH = MODEL_DIR / "wellbeing_system.joblib"
 METRICS_PATH = PROCESSED_DATA_DIR / "training_metrics.json"
